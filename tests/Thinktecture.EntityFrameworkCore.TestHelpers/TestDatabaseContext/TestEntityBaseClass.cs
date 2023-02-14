@@ -4,4 +4,5 @@ namespace Thinktecture.TestDatabaseContext;
 public class TestEntityBaseClass
 {
    public string Name { get; set; }
+   public string? Optional { get; set; }
 }

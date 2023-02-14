@@ -690,4 +690,50 @@ public class BulkInsertAsync : SchemaChangingIntegrationTestsBase
       var loadedEntities = await AssertDbContext.TestEntities_Own_SeparateOne_SeparateOne.ToListAsync();
       loadedEntities.Should().BeEquivalentTo(new[] { testEntity });
    }
+
+    [Fact]
+    public async Task Should_insert_properties_except_excluded()
+    {
+        var testEntity = new TestEntityWithBaseClass
+        {
+            Id = new Guid("40B5CA93-5C02-48AD-B8A1-12BC13313866"),
+            Name = "Name",
+            Optional = "Optional",
+            OtherKey = 42
+        };
+        var testEntities = new[] { testEntity };
+
+        var entityType = ActDbContext.Model.GetEntityType(typeof(TestEntityWithBaseClass));
+
+        var optionalProperty = entityType.FindProperty(nameof(TestEntityWithBaseClass.Optional)) ?? throw new Exception("Property must not be null");
+        var otherKeyProperty = entityType.FindProperty(nameof(TestEntityWithBaseClass.OtherKey)) ?? throw new Exception("Property must not be null");
+
+        var propertiesProvider = IEntityPropertiesProvider.Exclude<TestEntityWithBaseClass>(entity => new
+        {
+            entity.Optional,
+            entity.OtherKey
+        });
+
+        var properties = propertiesProvider.GetPropertiesForTempTable(entityType);
+        properties.Should().HaveCount(entityType.GetProperties().Count() - 2);
+        properties.Should().NotContain(optionalProperty);
+        properties.Should().NotContain(otherKeyProperty);
+
+        await ActDbContext.BulkInsertAsync(testEntities, new SqliteBulkInsertOptions
+        {
+            PropertiesToInsert = propertiesProvider
+        });
+
+        var loadedEntities = await AssertDbContext.TestEntitiesWithBaseClass.ToListAsync();
+        loadedEntities.Should().HaveCount(1);
+        var loadedEntity = loadedEntities[0];
+        loadedEntity.Should().BeEquivalentTo(new TestEntityWithBaseClass
+        {
+            Id = new Guid("40B5CA93-5C02-48AD-B8A1-12BC13313866"),
+            Name = "Name"
+        });
+
+        loadedEntity.Optional.Should().BeNullOrEmpty();
+        loadedEntity.OtherKey.Should().BeNull();
+    }
 }

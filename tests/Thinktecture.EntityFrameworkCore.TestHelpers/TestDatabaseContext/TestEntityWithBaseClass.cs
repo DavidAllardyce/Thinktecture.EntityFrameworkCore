@@ -5,6 +5,8 @@ public class TestEntityWithBaseClass : TestEntityBaseClass
 {
    public Guid Id { get; set; }
 
+   public int? OtherKey { get; set; }
+
    public static void Configure(ModelBuilder modelBuilder)
    {
       modelBuilder.Entity<TestEntityWithBaseClass>();

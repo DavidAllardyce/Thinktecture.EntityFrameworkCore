@@ -1,11 +1,13 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Thinktecture.EntityFrameworkCore.Data;
+using Thinktecture.EntityFrameworkCore.Internal;
 
 namespace Thinktecture.EntityFrameworkCore.BulkOperations;
 
 internal sealed class ExcludingEntityPropertiesProvider : IEntityPropertiesProvider
 {
+   private static readonly MemberInfoEqualityComparer _memberInfoEqualityComparer = new();
    private readonly IReadOnlyList<MemberInfo> _members;
 
    public ExcludingEntityPropertiesProvider(IReadOnlyList<MemberInfo> members)
@@ -20,13 +22,13 @@ internal sealed class ExcludingEntityPropertiesProvider : IEntityPropertiesProvi
 
    private IReadOnlyList<PropertyWithNavigations> Filter(IReadOnlyList<PropertyWithNavigations> properties)
    {
-      return properties.Where(p => _members.All(m => m != p.Property.PropertyInfo && m != p.Property.FieldInfo))
+      return properties.Where(p => _members.All(m => _memberInfoEqualityComparer.Equals(m, p.Property.PropertyInfo) == false && _memberInfoEqualityComparer.Equals(m, p.Property.FieldInfo) == false))
                        .ToList();
    }
 
    private IReadOnlyList<IProperty> Filter(IReadOnlyList<IProperty> properties)
    {
-      return properties.Where(p => _members.All(m => m != p.PropertyInfo && m != p.FieldInfo))
+      return properties.Where(p => _members.All(m => _memberInfoEqualityComparer.Equals(m, p.PropertyInfo) == false && _memberInfoEqualityComparer.Equals(m, p.FieldInfo) == false))
                        .ToList();
    }
 
